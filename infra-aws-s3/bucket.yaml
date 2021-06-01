@@ -1,0 +1,21 @@
+# Criação de um bucketS3 atraves de um template yaml que será usado no CloudFormation
+Description: Criacao dos Buckets S3
+
+Resources:
+
+  BucketSparkStreamingS3:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: databricks-spark-streaming
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256 
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: True
+        BlockPublicPolicy: True
+        IgnorePublicAcls: True
+        RestrictPublicBuckets: True
+  
+  
+  
