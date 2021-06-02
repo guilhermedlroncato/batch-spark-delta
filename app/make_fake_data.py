@@ -8,6 +8,7 @@ from datetime import datetime
 from dotenv import load_dotenv, dotenv_values
 from io import StringIO
 import boto3
+import json
 
 # função para parsear a saída do parâmetro SILENT
 def str2bool(v):
@@ -26,6 +27,8 @@ faker = Faker()
 # Função MAIN
 if __name__ == "__main__":
 
+    data_lake = 'local'  # local - s3
+    
     parser = argparse.ArgumentParser(description='Generate fake data...')
 
     parser.add_argument('--interval', type=int, default=0.5,
@@ -41,6 +44,7 @@ if __name__ == "__main__":
     print(f"Args parsed:")
     print(f"Interval: {args.interval}")
     print(f"Sample size; {args.n}")
+    print(f"Data Lake; {data_lake}")
     
     # pegando credencias da AWS
     AWS_SECRET_ACCESS_KEY = dotenv_values('.env')['AWS_SECRET_ACCESS_KEY']
@@ -56,15 +60,15 @@ if __name__ == "__main__":
 
     # Gera dados fake a faz ingestáo
     while True:
-        nome       = [faker.name() for i in range(args.n)]
-        gender     = [np.random.choice(["M", "F"], p=[0.5, 0.5]) for i in range(args.n)]
-        endereco   = [faker.address() for i in range(args.n)]
-        telefone   = [faker.phone_number() for i in range(args.n)]
-        email      = [faker.safe_email() for i in range(args.n)]
-        foto       = [faker.image_url() for i in range(args.n)]
-        nascimento = [faker.date_of_birth() for i in range(args.n)]
-        profissao  = [faker.job() for i in range(args.n)]
-        dt_update  = [datetime.now() for i in range(args.n)]
+        nome       = faker.name()
+        gender     = np.random.choice(["M", "F"], p=[0.5, 0.5])
+        endereco   = faker.address()
+        telefone   = faker.phone_number() 
+        email      = faker.safe_email() 
+        foto       = faker.image_url() 
+        nascimento = faker.date_of_birth() 
+        profissao  = faker.job() 
+        dt_update  = datetime.now()
 
         dados.append({
             "nome": nome,
@@ -77,27 +81,34 @@ if __name__ == "__main__":
             "profissao": profissao,
             "dt_update": dt_update
         })
-
+        
         qtde += 1
 
-        if qtde == 100:
-            df = pd.DataFrame(dados)       
+        if qtde == 10:
             
-            destination = "output_" + str(datetime.now().strftime('%Y_%m_%d_%H_%M_%S')) + '.json'
+            df = pd.DataFrame(dados)       
+                                  
+            if data_lake == 'local':
+                destination = "./data-lake/landing/output_" + str(datetime.now().strftime('%Y_%m_%d_%H_%M_%S')) + '.json'
+                df.to_json(destination, orient="records")        
 
-            # grava no S3
-            s3 = boto3.client("s3",\
-                            region_name=REGION_NAME,\
-                            aws_access_key_id=AWS_ACCESS_KEY_ID,\
-                            aws_secret_access_key=AWS_SECRET_ACCESS_KEY)
-            json_buf = StringIO()
-            df.to_json(json_buf)
-            json_buf.seek(0)
-            s3.put_object(Bucket=BUCKET, Body=json_buf.getvalue(), Key='landing/'+destination)
+            if data_lake == 's3':
+                # grava no S3
+                destination = "output_" + str(datetime.now().strftime('%Y_%m_%d_%H_%M_%S')) + '.json'
+
+                s3 = boto3.client("s3",\
+                                region_name=REGION_NAME,\
+                                aws_access_key_id=AWS_ACCESS_KEY_ID,\
+                                aws_secret_access_key=AWS_SECRET_ACCESS_KEY)
+                json_buf = StringIO()
+                df.to_json(json_buf, orient="records")
+                json_buf.seek(0)
+                s3.put_object(Bucket=BUCKET, Body=json_buf.getvalue(), Key='landing/'+destination)
             
             if not args.silent:
                 print(df, end="\n\n")
             
             qtde = 0 
+            dados = []
 
         time.sleep(args.interval)
