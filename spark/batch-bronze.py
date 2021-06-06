@@ -11,7 +11,7 @@ import pyspark.sql.functions as F
 if __name__ == '__main__':
     
     # path data-lake local
-    path_datalake = '/home/guilherme/Python/Projetos/databricks-spark-streaming/data-lake/'
+    path_datalake = '/home/guilherme/Python/Projetos/batch-spark-delta/data-lake/'
 
     # inicio sessão spark
     spark = SparkSession \
