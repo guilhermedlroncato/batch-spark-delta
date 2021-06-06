@@ -1,14 +1,12 @@
 import argparse
 import pandas as pd
 import numpy as np
-from sqlalchemy import create_engine
 from faker import Faker
 import time
 from datetime import datetime
-from dotenv import load_dotenv, dotenv_values
+from dotenv import dotenv_values
 from io import StringIO
 import boto3
-import json
 
 # função para parsear a saída do parâmetro SILENT
 def str2bool(v):
@@ -46,12 +44,6 @@ if __name__ == "__main__":
     print(f"Sample size; {args.n}")
     print(f"Data Lake; {data_lake}")
     
-    # pegando credencias da AWS
-    AWS_SECRET_ACCESS_KEY = dotenv_values('.env')['AWS_SECRET_ACCESS_KEY']
-    AWS_ACCESS_KEY_ID     = dotenv_values('.env')['AWS_ACCESS_KEY_ID']  
-    REGION_NAME           = dotenv_values('.env')['REGION_NAME'] 
-    BUCKET                = 'databricks-spark-streaming'   
-
     #-----------------------------------------------------------------
     print("Iniciando a simulacao...", end="\n\n")
 
@@ -77,22 +69,29 @@ if __name__ == "__main__":
             "telefone": telefone,
             "email": email,
             "foto": foto,
-            "nascimento": nascimento,
+            "nascimento": str(nascimento),
             "profissao": profissao,
-            "dt_update": dt_update
+            "dt_update": str(dt_update)
         })
         
         qtde += 1
 
         if qtde == 10:
             
+            print(dados)
             df = pd.DataFrame(dados)       
                                   
             if data_lake == 'local':
-                destination = "./data-lake/landing/output_" + str(datetime.now().strftime('%Y_%m_%d_%H_%M_%S')) + '.json'
+                destination = "../data-lake/landing/output_" + str(datetime.now().strftime('%Y_%m_%d_%H_%M_%S')) + '.json'
                 df.to_json(destination, orient="records")        
 
             if data_lake == 's3':
+                # pegando credencias da AWS
+                AWS_SECRET_ACCESS_KEY = dotenv_values('.env')['AWS_SECRET_ACCESS_KEY']
+                AWS_ACCESS_KEY_ID     = dotenv_values('.env')['AWS_ACCESS_KEY_ID']  
+                REGION_NAME           = dotenv_values('.env')['REGION_NAME'] 
+                BUCKET                = 'databricks-spark-streaming'   
+                
                 # grava no S3
                 destination = "output_" + str(datetime.now().strftime('%Y_%m_%d_%H_%M_%S')) + '.json'
 
