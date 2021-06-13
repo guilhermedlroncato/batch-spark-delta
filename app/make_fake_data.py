@@ -29,9 +29,9 @@ if __name__ == "__main__":
     
     parser = argparse.ArgumentParser(description='Generate fake data...')
 
-    parser.add_argument('--interval', type=int, default=0.5,
+    parser.add_argument('--interval', type=int, default=0.1,
                         help='interval of generating fake data in seconds')
-    parser.add_argument('-n', type=int, default=1,
+    parser.add_argument('-n', type=int, default=100,
                         help='sample size')
     parser.add_argument('--silent', type=str2bool, nargs='?',
                         const=True, default=False,
@@ -48,10 +48,11 @@ if __name__ == "__main__":
     print("Iniciando a simulacao...", end="\n\n")
 
     qtde = 0
+    qtde_total = 0
     dados = []
 
     # Gera dados fake a faz ingestáo
-    while True:
+    while qtde_total < args.n:
         nome       = faker.name()
         gender     = np.random.choice(["M", "F"], p=[0.5, 0.5])
         endereco   = faker.address()
@@ -75,6 +76,7 @@ if __name__ == "__main__":
         })
         
         qtde += 1
+        qtde_total += 1
 
         if qtde == 10:
             
@@ -82,7 +84,7 @@ if __name__ == "__main__":
             df = pd.DataFrame(dados)       
                                   
             if data_lake == 'local':
-                destination = "../data-lake/landing/output_" + str(datetime.now().strftime('%Y_%m_%d_%H_%M_%S')) + '.json'
+                destination = "../data-lake/landing/users/output_" + str(datetime.now().strftime('%Y_%m_%d_%H_%M_%S')) + '.json'
                 df.to_json(destination, orient="records")        
 
             if data_lake == 's3':

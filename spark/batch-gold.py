@@ -19,54 +19,36 @@ if __name__ == '__main__':
     .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")\
     .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")\
     .getOrCreate()
-
-    # informacoes de parametros da configuracao
-    print(SparkConf().getAll())
-
+    
     # lendo dados dos usuarios na bronze em formato parquet
-    df_users = spark.read.parquet(path_datalake + 'bronze/users/*.parquet')
+    df_users = spark.read.format("delta").load(path_datalake + "silver/users")
 
     # schema do df_users
-    df_users.printSchema()
+    df_users.printSchema()  
 
-    # consultando dados do df_users
-    df_users.show()
-    
     # criando engine sql para o df_users
     df_users.createOrReplaceTempView("users")
 
     df_result = spark.sql(
         """
-        SELECT u.dt_update
-             , u.email
-             , u.endereco
-             , u.dt_nascimento
-             , CAST(floor(datediff(now(),u.dt_nascimento)/365.25) as INTEGER) as idade
-             , CASE 
-                 WHEN floor(datediff(now(),u.dt_nascimento)/365.25) > 65 then 'Idoso'
-                 WHEN floor(datediff(now(),u.dt_nascimento)/365.25) BETWEEN 18 AND 65 then 'Adulto'
-                 WHEN floor(datediff(now(),u.dt_nascimento)/365.25) BETWEEN 13 AND 17 then 'Adolescente'
-                 ELSE 'Criança'
-               END as grupo_idade
-             , u.nome
-             , u.profissao
+        SELECT TO_DATE(u.dt_update) dt_base
+             , u.grupo_idade
              , u.sexo
-             , u.telefone
+             , ROUND(AVG(u.idade),2) idade_media
+             , COUNT(1) total_users
           FROM users u
+      GROUP BY to_date(u.dt_update)
+             , u.grupo_idade
+             , u.sexo
         """
     )
-
-    # consultando dados do df_results
-    df_result.show()
-
-    # schema do df_results
-    df_result.printSchema()
-
-    # gravando os dados na camada Silver em formato Delta
+    
+    # gravando os dados na camada Gold em formato Delta
     df_result.write.mode('overwrite')\
         .format("delta")\
         .option("overwriteSchema", "true")\
-        .save(path_datalake + 'silver/users')
+        .partitionBy('dt_base', 'grupo_idade')\
+        .save(path_datalake + 'gold/users')
 
     # encerra sessao spark
     spark.stop()

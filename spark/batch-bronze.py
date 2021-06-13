@@ -29,7 +29,7 @@ if __name__ == '__main__':
         .format('json') \
         .option('inferSchema', 'true') \
         .option('header', 'true') \
-        .json(path_datalake + 'landing/*.json')
+        .json(path_datalake + 'landing/users/*.json')
 
     # schema do df_users
     df_users.printSchema()
@@ -61,7 +61,9 @@ if __name__ == '__main__':
     df_result.show()
 
     # salvando os dados em formato parquet na camada bronze
-    df_result.write.mode("overwrite").format("parquet").save(path_datalake + 'bronze')
+    df_result.write.mode("overwrite")\
+        .format("parquet")\
+        .save(path_datalake + 'bronze/users')
 
     # encerra sessao spark
     spark.stop()
